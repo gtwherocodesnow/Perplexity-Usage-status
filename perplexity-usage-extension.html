@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perplexity Usage — Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0f;
+    --surface: #0e1117;
+    --surface2: #141820;
+    --border: #1c2133;
+    --border-hi: #263046;
+    --accent: #4f8ef7;
+    --teal: #34d9b3;
+    --text: #e2e8f8;
+    --sub: #94a3c4;
+    --muted: #4a5578;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 48px 24px 64px;
+  }
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(90px);
+    opacity: 0.28;
+  }
+  body::before { width:500px;height:400px;top:-100px;left:-100px;background:radial-gradient(circle,#1a3a7a,transparent 70%); }
+  body::after  { width:400px;height:350px;bottom:-80px;right:-60px;background:radial-gradient(circle,#1a3355,transparent 70%); }
+  .container { max-width: 640px; margin: 0 auto; position: relative; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 99px; padding: 4px 12px 4px 8px;
+    font-size: 0.65rem; font-weight: 500; color: var(--accent);
+    letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 16px;
+  }
+  .pill-dot { width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2.5s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  h1 { font-size:2.4rem;font-weight:600;line-height:1.1;letter-spacing:-.03em;color:var(--text);margin-bottom:10px; }
+  h1 em {
+    font-style: normal;
+    background: linear-gradient(120deg, #4f8ef7, #34d9b3);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .header-sub { font-size:.875rem;color:var(--sub);font-weight:300;line-height:1.6;max-width:480px;margin-bottom:44px; }
+
+  .steps { display:flex;flex-direction:column; }
+  .step {
+    display:flex;gap:20px;padding:24px 0;border-bottom:1px solid var(--border);
+    animation: rise 0.5s ease both;
+  }
+  .step:last-child { border-bottom: none; }
+  .step:nth-child(1){animation-delay:0ms} .step:nth-child(2){animation-delay:80ms} .step:nth-child(3){animation-delay:160ms}
+  @keyframes rise { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .step-num {
+    width:28px;height:28px;border-radius:8px;
+    background:var(--surface2);border:1px solid var(--border-hi);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--accent);flex-shrink:0;margin-top:2px;
+  }
+  .step-title { font-size:.9rem;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:-.01em; }
+  .step-body  { font-size:.8rem;color:var(--sub);line-height:1.65;font-weight:300; }
+  .step-body strong { color:var(--text);font-weight:500; }
+  .step-body code {
+    font-family:'DM Mono',monospace;font-size:.72rem;
+    background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.18);
+    color:var(--accent);padding:1px 7px;border-radius:5px;
+  }
+
+  .bm-card {
+    background:var(--surface);border:1px solid var(--border-hi);
+    border-radius:14px;padding:20px;margin-top:16px;position:relative;overflow:hidden;
+  }
+  .bm-card::before {
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(135deg,rgba(79,142,247,.04),rgba(52,217,179,.03));pointer-events:none;
+  }
+  .bm-card-label { font-size:.6rem;font-family:'DM Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px; }
+  .bm-drag-area { display:flex;align-items:center;gap:16px;flex-wrap:wrap; }
+
+  #bm-link {
+    display:inline-flex;align-items:center;gap:8px;padding:11px 20px;
+    background:linear-gradient(135deg,rgba(79,142,247,.18),rgba(52,217,179,.1));
+    border:1px solid rgba(79,142,247,.38);border-radius:10px;
+    color:var(--accent);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;
+    text-decoration:none;cursor:grab;user-select:none;
+    transition:all .2s;box-shadow:0 0 20px rgba(79,142,247,.08);
+  }
+  #bm-link:hover { border-color:var(--accent);background:rgba(79,142,247,.22);box-shadow:0 0 28px rgba(79,142,247,.16);transform:translateY(-1px); }
+  #bm-link:active { cursor:grabbing;transform:translateY(0); }
+
+  .drag-label { font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:6px; }
+  .drag-label::before { content:'←';color:var(--accent); }
+
+  details { margin-top:14px; }
+  summary {
+    font-size:.72rem;color:var(--muted);cursor:pointer;list-style:none;
+    display:inline-flex;align-items:center;gap:6px;transition:color .2s;
+  }
+  summary:hover { color:var(--sub); }
+  summary::before { content:'▶';font-size:.5rem;transition:transform .2s; }
+  details[open] summary::before { transform:rotate(90deg); }
+
+  .code-wrap {
+    margin-top:10px;background:#060810;border:1px solid var(--border);
+    border-radius:10px;padding:14px 68px 14px 14px;overflow-x:auto;position:relative;
+  }
+  .code-wrap pre { font-family:'DM Mono',monospace;font-size:.6rem;color:var(--teal);line-height:1.5;white-space:pre-wrap;word-break:break-all; }
+  .copy-btn {
+    position:absolute;top:10px;right:10px;background:var(--surface2);border:1px solid var(--border-hi);
+    color:var(--sub);font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.08em;
+    padding:5px 11px;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:all .2s;
+  }
+  .copy-btn:hover { color:var(--accent);border-color:rgba(79,142,247,.4); }
+
+  .footer { margin-top:36px;padding-top:24px;border-top:1px solid var(--border);font-size:.72rem;color:var(--muted);line-height:1.65;font-weight:300; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="pill"><span class="pill-dot"></span>Bookmarklet Setup</div>
+  <h1>Perplexity <em>Usage</em></h1>
+  <p class="header-sub">See your remaining Pro searches, Pro Research, Labs, and upload limit — live, in one overlay.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Reveal your bookmarks bar</div>
+        <div class="step-body">
+          Press <code>Ctrl+Shift+B</code> on Windows/Linux or <code>⌘+Shift+B</code> on Mac.
+          Firefox: <strong>View → Toolbars → Bookmarks Toolbar</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Drag the bookmarklet onto your bar</div>
+        <div class="step-body">
+          Grab the button below and drag it up to your bookmarks bar.
+          <div class="bm-card">
+            <div class="bm-card-label">Drag this to your bookmarks bar</div>
+            <div class="bm-drag-area">
+              <a id="bm-link" href="#">📊 Perplexity Usage</a>
+              <span class="drag-label">drag me up to the bar</span>
+            </div>
+            <details>
+              <summary>Can't drag? Add manually</summary>
+              <div class="code-wrap">
+                <button class="copy-btn" id="copy-btn" onclick="copyCode(this)">Copy</button>
+                <pre id="bm-code-display">Building…</pre>
+              </div>
+              <div class="step-body" style="margin-top:10px;">
+                Right-click bookmarks bar → <strong>Add bookmark</strong> → Name: <code>Perplexity Usage</code>, URL: paste the code above.
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Go to Perplexity and click it</div>
+        <div class="step-body">
+          Navigate to <strong>perplexity.ai</strong> while logged in, then click <strong>📊 Perplexity Usage</strong> in your bookmarks bar.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer">All data is fetched via your browser session directly from Perplexity — nothing is sent elsewhere. Only works on perplexity.ai while logged in.</p>
+</div>
+
+<script>
+// ─── BOOKMARKLET FUNCTION ────────────────────────────────────────────────────
+// Defined as a plain named function so .toString() gives clean, escapable source.
+// No template literals, no backticks, no string escaping needed here —
+// the function runs inside perplexity.ai's page context.
+
+function pplxUsageDashboard() {
+  if (document.getElementById('_pu_ov')) return;
+
+  // ── CSS ──
+  var css = [
+    '@keyframes _pu_up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}',
+    '@keyframes _pu_spin{to{transform:rotate(360deg)}}',
+    '@keyframes _pu_pulse{0%,100%{opacity:1}50%{opacity:.3}}',
+    '#_pu_ov{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;',
+      'background:rgba(4,6,12,.86);backdrop-filter:blur(10px);',
+      'font-family:"DM Sans","Inter",ui-sans-serif,system-ui,sans-serif;}',
+    '#_pu_box{background:#0e1117;border:1px solid #1c2133;border-radius:20px;',
+      'width:min(760px,95vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;',
+      'box-shadow:0 32px 80px rgba(0,0,0,.8),0 0 0 1px rgba(79,142,247,.07);}',
+    '#_pu_hdr{padding:20px 24px 16px;border-bottom:1px solid #1c2133;',
+      'display:flex;justify-content:space-between;align-items:center;flex-shrink:0;',
+      'background:linear-gradient(180deg,rgba(79,142,247,.04),transparent);}',
+    '#_pu_scroll{overflow-y:auto;padding:20px 24px 28px;flex:1;}',
+    '#_pu_scroll::-webkit-scrollbar{width:3px}',
+    '#_pu_scroll::-webkit-scrollbar-thumb{background:#1c2133;border-radius:4px}',
+    '._sl{font-size:.58rem;font-family:"DM Mono",ui-monospace,monospace;letter-spacing:.16em;',
+      'text-transform:uppercase;color:#4a5578;margin-bottom:10px;margin-top:6px;}',
+    '._g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:22px;}',
+    '._gw{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}',
+    '._c{background:#141820;border:1px solid #1c2133;border-radius:12px;padding:16px;',
+      'position:relative;overflow:hidden;opacity:0;animation:_pu_up .35s ease both;transition:border-color .2s;}',
+    '._c:hover{border-color:#263046;}',
+    '._tb{position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0;}',
+    '._cl{font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:#4a5578;margin-bottom:10px;',
+      'font-family:"DM Mono",ui-monospace,monospace;}',
+    '._n{font-size:2rem;font-weight:600;line-height:1;letter-spacing:-.04em;}',
+    '._ns{font-size:.62rem;color:#4a5578;margin-top:5px;}',
+    '._row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}',
+    '._pct{font-size:1.5rem;font-weight:600;letter-spacing:-.03em;}',
+    '._fr{font-size:.62rem;color:#4a5578;}',
+    '._tr{background:#1c2133;border-radius:99px;height:4px;overflow:hidden;}',
+    '._fi{height:100%;border-radius:99px;transition:width .9s cubic-bezier(.4,0,.2,1);}',
+    '._btn{background:transparent;border:1px solid #1c2133;color:#94a3c4;padding:6px 14px;',
+      'font-family:inherit;font-size:.72rem;font-weight:500;cursor:pointer;border-radius:8px;transition:all .2s;}',
+    '._btn:hover{border-color:#263046;color:#e2e8f8;}',
+    '._btnp:hover{border-color:rgba(79,142,247,.5) !important;color:#4f8ef7 !important;}',
+    '._sp{width:26px;height:26px;border:2px solid #1c2133;border-top-color:#4f8ef7;',
+      'border-radius:50%;animation:_pu_spin .7s linear infinite;}'
+  ].join('');
+
+  var styleEl = document.createElement('style');
+  styleEl.textContent = css;
+  document.head.appendChild(styleEl);
+
+  // ── Overlay shell (built with DOM, no nested quote escaping) ──
+  var ov = document.createElement('div');
+  ov.id = '_pu_ov';
+
+  var box = document.createElement('div');
+  box.id = '_pu_box';
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.id = '_pu_hdr';
+
+  var titleWrap = document.createElement('div');
+  titleWrap.style.cssText = 'display:flex;align-items:center;gap:10px;';
+
+  var dot = document.createElement('div');
+  dot.style.cssText = 'width:7px;height:7px;border-radius:50%;background:#4f8ef7;animation:_pu_pulse 2.5s infinite;flex-shrink:0;';
+
+  var titleBlock = document.createElement('div');
+  var titleLine = document.createElement('div');
+  titleLine.style.cssText = 'font-size:.95rem;font-weight:600;letter-spacing:-.02em;color:#e2e8f8;';
+  titleLine.textContent = 'Perplexity ';
+  var grad = document.createElement('span');
+  grad.style.cssText = 'background:linear-gradient(120deg,#4f8ef7,#34d9b3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+  grad.textContent = 'Usage';
+  titleLine.appendChild(grad);
+
+  var subLine = document.createElement('div');
+  subLine.style.cssText = 'font-size:.58rem;color:#4a5578;font-family:"DM Mono",monospace;letter-spacing:.08em;margin-top:1px;';
+  subLine.textContent = 'LIVE DASHBOARD';
+
+  titleBlock.appendChild(titleLine);
+  titleBlock.appendChild(subLine);
+  titleWrap.appendChild(dot);
+  titleWrap.appendChild(titleBlock);
+
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;align-items:center;';
+
+  var tsEl = document.createElement('span');
+  tsEl.id = '_pu_ts';
+  tsEl.style.cssText = 'font-size:.62rem;color:#4a5578;';
+
+  var refBtn = document.createElement('button');
+  refBtn.id = '_pu_ref';
+  refBtn.className = '_btn _btnp';
+  refBtn.textContent = '↻ Refresh';
+
+  var closeBtn = document.createElement('button');
+  closeBtn.className = '_btn';
+  closeBtn.textContent = '✕';
+
+  btnRow.appendChild(tsEl);
+  btnRow.appendChild(refBtn);
+  btnRow.appendChild(closeBtn);
+
+  hdr.appendChild(titleWrap);
+  hdr.appendChild(btnRow);
+
+  // Scroll area + body
+  var scroll = document.createElement('div');
+  scroll.id = '_pu_scroll';
+
+  var body = document.createElement('div');
+  body.id = '_pu_body';
+  body.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:180px;flex-direction:column;gap:12px;';
+
+  var spinEl = document.createElement('div');
+  spinEl.className = '_sp';
+  var loadTxt = document.createElement('div');
+  loadTxt.style.cssText = 'font-size:.72rem;color:#4a5578;';
+  loadTxt.textContent = 'Fetching data from 2 endpoints\u2026';
+  body.appendChild(spinEl);
+  body.appendChild(loadTxt);
+
+  scroll.appendChild(body);
+  box.appendChild(hdr);
+  box.appendChild(scroll);
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+
+  // Close on backdrop click
+  ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+  closeBtn.addEventListener('click', function() { ov.remove(); });
+  refBtn.addEventListener('click', function() { doFetch(); });
+
+  // ── Helpers ──
+  function cPct(p) { return p >= 85 ? '#f87171' : p >= 60 ? '#fbbf24' : '#34d9b3'; }
+  function hk(k) { return k.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }); }
+
+  function quotaCard(icon, label, rem, tot, delay) {
+    var usedPct = (tot > 0) ? Math.min(100, Math.round((tot - rem) / tot * 100)) : 0;
+    var col = cPct(usedPct);
+    var pctFill = (100 - usedPct);
+    var h = '<div class="_c" style="animation-delay:' + delay + 'ms">'
+      + '<div class="_tb" style="background:' + col + '"></div>'
+      + '<div class="_cl">' + icon + '&nbsp;' + label + '</div>'
+      + '<div class="_n" style="color:' + col + '">' + rem.toLocaleString() + '</div>'
+      + '<div class="_ns">remaining' + (tot ? ' / ' + tot.toLocaleString() + ' total' : '') + '</div>';
+    if (tot) {
+      h += '<div class="_tr" style="margin-top:10px;"><div class="_fi" style="background:' + col + ';width:' + pctFill + '%"></div></div>';
+    }
+    return h + '</div>';
+  }
+
+  function renderQuotas(rl, st) {
+    var fields = [
+      { src: rl, key: 'remaining_pro',      icon: '&#9889;',   label: 'Pro'          },
+      { src: rl, key: 'remaining_research',  icon: '&#128300;', label: 'Pro Research' },
+      { src: rl, key: 'remaining_labs',      icon: '&#129514;', label: 'Labs'         },
+      { src: st, key: 'upload_limit',        icon: '&#128206;', label: 'Upload Limit' }
+    ];
+    var html = '<div class="_sl">Your Usage</div><div class="_g">';
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      var val = f.src[f.key];
+      if (val != null && typeof val === 'number') {
+        html += quotaCard(f.icon, f.label, val, null, i * 70);
+      }
+    }
+    return html + '</div>';
+  }
+
+  function renderRateLimits(data) {
+    function flatten(o, p) {
+      var r = {};
+      for (var k in o) {
+        var key = p ? p + '.' + k : k;
+        var v = o[k];
+        if (v && typeof v === 'object' && !Array.isArray(v)) { Object.assign(r, flatten(v, key)); }
+        else { r[key] = v; }
+      }
+      return r;
+    }
+    var flat = flatten(data);
+    var groups = {};
+    for (var key in flat) {
+      var base = key.replace(/\.(limit|used|remaining|reset|total|current|max|count|allowed|consumed|reset_after)$/i, '');
+      if (!groups[base]) groups[base] = {};
+      var suf = key.length > base.length ? key.slice(base.length + 1) : 'value';
+      groups[base][suf.toLowerCase()] = flat[key];
+    }
+
+    var html = '<div class="_sl">Rate Limits</div><div class="_g _gw">';
+    var idx = 0;
+
+    for (var grp in groups) {
+      var vals = groups[grp];
+      var label = grp.split('.').pop().replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      var lv = vals.limit != null ? vals.limit : vals.max != null ? vals.max : vals.total != null ? vals.total : vals.allowed != null ? vals.allowed : null;
+      var uv = vals.used != null ? vals.used : vals.current != null ? vals.current : vals.consumed != null ? vals.consumed : vals.count != null ? vals.count : null;
+      var hasL = lv != null, hasU = uv != null, hasR = vals.remaining != null;
+      var d = idx * 55;
+
+      if ((hasL && hasU) || (hasL && hasR)) {
+        var used2 = hasU ? uv : lv - (vals.remaining || 0);
+        var pct = lv > 0 ? Math.min(100, Math.round(used2 / lv * 100)) : 0;
+        var col = cPct(pct);
+        var ri = '';
+        if (vals.reset) ri = 'resets ' + new Date(vals.reset * 1000).toLocaleTimeString();
+        else if (vals.reset_after) ri = 'resets in ' + vals.reset_after + 's';
+
+        html += '<div class="_c" style="animation-delay:' + d + 'ms">'
+          + '<div class="_tb" style="background:' + col + '"></div>'
+          + '<div class="_cl">' + label + '</div>'
+          + '<div class="_row"><span class="_pct" style="color:' + col + '">' + pct + '%</span>'
+          + '<span class="_fr">' + used2.toLocaleString() + ' / ' + lv.toLocaleString() + '</span></div>'
+          + '<div class="_tr"><div class="_fi" style="background:' + col + ';width:' + pct + '%"></div></div>'
+          + (ri ? '<div class="_ns" style="margin-top:6px;">' + ri + '</div>' : '')
+          + '</div>';
+        idx++;
+      } else {
+        for (var k2 in vals) {
+          var v2 = vals[k2], d2 = v2, s2 = '', c2 = '#e2e8f8';
+          if (typeof v2 === 'number' && v2 > 1e9 && v2 < 2e10) { d2 = new Date(v2 * 1000).toLocaleTimeString(); s2 = new Date(v2 * 1000).toLocaleDateString(); }
+          else if (typeof v2 === 'number') { d2 = v2.toLocaleString(); }
+          else if (typeof v2 === 'boolean') { d2 = v2 ? '&#10003;' : '&#10007;'; c2 = v2 ? '#34d9b3' : '#f87171'; }
+          var lb2 = ((grp + ' ' + k2).split('.').slice(-2).join(' ')).replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+          html += '<div class="_c" style="animation-delay:' + (idx * 55) + 'ms">'
+            + '<div class="_cl">' + lb2 + '</div>'
+            + '<div class="_n" style="color:' + c2 + '">' + d2 + '</div>'
+            + (s2 ? '<div class="_ns">' + s2 + '</div>' : '')
+            + '</div>';
+          idx++;
+        }
+      }
+    }
+    return html + '</div>';
+  }
+
+  function buildRawSection(rl, st) {
+    var wrap = document.createElement('details');
+    wrap.style.marginTop = '8px';
+    var sum = document.createElement('summary');
+    sum.style.cssText = 'font-size:.62rem;color:#4a5578;cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;font-family:"DM Mono",monospace;';
+    sum.textContent = '\u25b6 Raw JSON';
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;';
+
+    function panel(title, data, color) {
+      var d = document.createElement('div');
+      var lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:.56rem;color:#4a5578;margin-bottom:6px;font-family:"DM Mono",monospace;letter-spacing:.1em;text-transform:uppercase;';
+      lbl.textContent = title;
+      var pre = document.createElement('pre');
+      pre.style.cssText = 'background:#060810;border:1px solid #1c2133;border-radius:8px;padding:12px;font-size:.58rem;color:' + color + ';line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-all;max-height:200px;';
+      pre.textContent = JSON.stringify(data, null, 2);
+      d.appendChild(lbl);
+      d.appendChild(pre);
+      return d;
+    }
+
+    if (rl) grid.appendChild(panel('rate-limit/all', rl, '#34d9b3'));
+    if (st) grid.appendChild(panel('user/settings', st, '#a78bfa'));
+    wrap.appendChild(sum);
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  // ── Auto-refresh (every 60s) ──
+  var _puTimer = null;
+  var _puCountdown = 60;
+
+  function startCountdown() {
+    if (_puTimer) clearInterval(_puTimer);
+    _puCountdown = 60;
+    _puTimer = setInterval(function() {
+      _puCountdown--;
+      if (_puCountdown <= 0) {
+        clearInterval(_puTimer);
+        doFetch();
+      } else {
+        tsEl.textContent = 'Refreshes in ' + _puCountdown + 's';
+      }
+    }, 1000);
+  }
+
+  // Stop timer when overlay is removed
+  var observer = new MutationObserver(function() {
+    if (!document.getElementById('_pu_ov')) { clearInterval(_puTimer); observer.disconnect(); }
+  });
+  observer.observe(document.body, { childList: true });
+  function doFetch() {
+    refBtn.disabled = true;
+    body.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:180px;flex-direction:column;gap:12px;';
+    body.innerHTML = '';
+    var sp = document.createElement('div'); sp.className = '_sp';
+    var lt = document.createElement('div'); lt.style.cssText = 'font-size:.72rem;color:#4a5578;'; lt.textContent = 'Fetching\u2026';
+    body.appendChild(sp); body.appendChild(lt);
+
+    Promise.all([
+      fetch('/rest/rate-limit/all', { credentials: 'include' })
+        .then(function(r) { if (!r.ok) throw new Error('rate-limit: HTTP ' + r.status); return r.json(); }),
+      fetch('/rest/user/settings', { credentials: 'include' })
+        .then(function(r) { if (!r.ok) throw new Error('settings: HTTP ' + r.status); return r.json(); })
+    ]).then(function(res) {
+      var rl = res[0], st = res[1];
+      body.style.cssText = '';
+      body.innerHTML = renderQuotas(rl, st);
+      body.appendChild(buildRawSection(rl, st));
+      tsEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
+      refBtn.disabled = false;
+      startCountdown();
+    }).catch(function(err) {
+        body.style.cssText = '';
+        body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:32px 0;">'
+          + '<div style="font-size:2rem;">&#9888;&#65039;</div>'
+          + '<div style="font-size:.85rem;font-weight:600;color:#f87171;">Failed to load</div>'
+          + '<div style="font-size:.72rem;color:#4a5578;max-width:340px;text-align:center;line-height:1.6;">' + err.message + '</div>'
+          + '</div>';
+        refBtn.disabled = false;
+      });
+  }
+
+  doFetch();
+}
+
+// ─── BUILD BOOKMARKLET HREF ───────────────────────────────────────────────────
+// Use function.toString() so the source is clean JS with no manual escaping.
+// encodeURIComponent handles all special characters for the javascript: URL.
+var bookmarkletCode = '(' + pplxUsageDashboard.toString() + ')()';
+var bookmarkletHref = 'javascript:' + encodeURIComponent(bookmarkletCode);
+
+document.getElementById('bm-link').href = bookmarkletHref;
+document.getElementById('bm-code-display').textContent = bookmarkletHref;
+
+function copyCode(btn) {
+  navigator.clipboard.writeText(bookmarkletHref).then(function() {
+    btn.textContent = '\u2713 Copied';
+    btn.style.color = '#34d9b3';
+    btn.style.borderColor = 'rgba(52,217,179,.4)';
+    setTimeout(function() {
+      btn.textContent = 'Copy';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2200);
+  });
+}
+</script>
+</body>
+</html>
