@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perplexity Usage — Chrome Extension</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111;
+    --surface2: #181818;
+    --border: rgba(255,255,255,0.07);
+    --border-hi: rgba(255,255,255,0.12);
+    --text: #f0f0f0;
+    --sub: rgba(255,255,255,0.45);
+    --muted: rgba(255,255,255,0.2);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --green-glow: rgba(52,211,153,0.2);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Noise texture overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── Ambient glows ── */
+  .glow-1, .glow-2 {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(120px);
+  }
+  .glow-1 { width: 600px; height: 400px; top: -100px; left: -150px; background: radial-gradient(circle, rgba(52,211,153,0.06), transparent 70%); }
+  .glow-2 { width: 500px; height: 400px; bottom: -80px; right: -100px; background: radial-gradient(circle, rgba(52,211,153,0.04), transparent 70%); }
+
+  /* ── Layout ── */
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── Nav ── */
+  nav {
+    padding: 28px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.82rem; font-weight: 600; color: var(--sub);
+    letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  }
+  .nav-logo svg { opacity: 0.6; }
+  .nav-badge {
+    font-size: 0.62rem; font-family: 'JetBrains Mono', monospace;
+    background: var(--green-dim); border: 1px solid rgba(52,211,153,0.2);
+    color: var(--green); padding: 3px 10px; border-radius: 99px;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Hero ── */
+  .hero { padding: 80px 0 64px; }
+
+  .hero-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 0.65rem; font-family: 'JetBrains Mono', monospace;
+    color: var(--green); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .hero-label-dot {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+
+  h1 {
+    font-size: clamp(2.6rem, 6vw, 4rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+  h1 .accent { color: var(--green); }
+
+  .hero-sub {
+    font-size: 1rem;
+    color: var(--sub);
+    line-height: 1.65;
+    max-width: 520px;
+    margin-bottom: 40px;
+    font-weight: 400;
+  }
+
+  .hero-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--green); color: #0a0a0a;
+    font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700;
+    padding: 13px 24px; border-radius: 10px; text-decoration: none;
+    transition: all 0.2s; letter-spacing: 0.01em;
+    box-shadow: 0 0 30px rgba(52,211,153,0.25);
+  }
+  .btn-primary:hover { background: #5eead4; transform: translateY(-1px); box-shadow: 0 0 40px rgba(52,211,153,0.35); }
+
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent; color: var(--sub);
+    font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 500;
+    padding: 13px 20px; border-radius: 10px; text-decoration: none;
+    border: 1px solid var(--border-hi);
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,0.22); background: rgba(255,255,255,0.04); }
+
+  /* ── Preview card ── */
+  .preview {
+    margin: 56px 0 80px;
+    background: var(--surface);
+    border: 1px solid var(--border-hi);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  .preview-bar {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .preview-dots { display: flex; gap: 6px; }
+  .preview-url {
+    flex: 1; text-align: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
+    color: var(--muted);
+  }
+
+  .preview-body {
+    padding: 32px;
+    background: #111111;
+    display: flex; justify-content: flex-end; align-items: flex-end;
+    min-height: 240px;
+    position: relative;
+    overflow: hidden;
+  }
+  .preview-body::before {
+    content: 'perplexity pro';
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 2.2rem; font-weight: 700; color: rgba(255,255,255,0.04);
+    letter-spacing: -0.03em; white-space: nowrap;
+  }
+
+  /* Mini extension panel preview */
+  .mini-panel {
+    background: #111111;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    width: 260px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+
+  .mini-hdr {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .mini-title { font-size: 0.8rem; font-weight: 600; color: #f0f0f0; }
+  .mini-title em { font-style: normal; color: #34d399; }
+  .mini-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; margin-right: 6px; display: inline-block; }
+  .mini-ts { font-size: 0.55rem; color: rgba(255,255,255,0.25); font-family: 'JetBrains Mono', monospace; }
+
+  .mini-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    padding: 10px;
+  }
+  .mini-card {
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 10px 11px;
+    position: relative; overflow: hidden;
+  }
+  .mini-card-bar { position: absolute; top: 0; left: 0; right: 0; height: 1.5px; }
+  .mini-cl { font-size: 0.5rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 5px; }
+  .mini-cv { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; color: #fff; line-height: 1; }
+  .mini-cs { font-size: 0.5rem; color: rgba(255,255,255,0.2); margin-top: 3px; }
+
+  .mini-footer {
+    padding: 7px 14px 9px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .mini-countdown { font-size: 0.55rem; color: rgba(255,255,255,0.2); font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 6px; }
+  .mini-track { width: 40px; height: 1.5px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
+  .mini-fill { height: 100%; width: 70%; background: rgba(255,255,255,0.2); border-radius: 99px; }
+  .mini-label { font-size: 0.52rem; color: rgba(255,255,255,0.18); }
+
+  /* Mini FAB */
+  .mini-fab {
+    position: absolute; bottom: 20px; right: 86px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #1a1a1a;
+    border: 1px solid rgba(52,211,153,0.4);
+    box-shadow: 0 0 12px rgba(52,211,153,0.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Section divider ── */
+  .divider {
+    height: 1px; background: var(--border); margin: 0 0 64px;
+  }
+
+  /* ── Steps ── */
+  .section-label {
+    font-size: 0.62rem; font-family: 'JetBrains Mono', monospace;
+    color: var(--green); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em;
+    margin-bottom: 40px; color: var(--text);
+  }
+
+  .steps { display: flex; flex-direction: column; gap: 0; margin-bottom: 64px; }
+
+  .step {
+    display: grid; grid-template-columns: 56px 1fr;
+    gap: 0 24px; padding: 28px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.5s ease both;
+  }
+  .step:last-child { border-bottom: none; }
+  .step:nth-child(1){animation-delay:0ms}
+  .step:nth-child(2){animation-delay:60ms}
+  .step:nth-child(3){animation-delay:120ms}
+  .step:nth-child(4){animation-delay:180ms}
+
+  .step-num {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--surface2); border: 1px solid var(--border-hi);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+    color: var(--green); font-weight: 500; flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-content {}
+  .step-title-text {
+    font-size: 1rem; font-weight: 600; color: var(--text);
+    margin-bottom: 8px; letter-spacing: -0.01em;
+  }
+  .step-body {
+    font-size: 0.85rem; color: var(--sub); line-height: 1.7; font-weight: 400;
+  }
+  .step-body strong { color: var(--text); font-weight: 600; }
+
+  /* Code/kbd */
+  kbd, code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+    background: var(--surface2); border: 1px solid var(--border-hi);
+    color: var(--green); padding: 2px 8px; border-radius: 5px;
+  }
+
+  /* Screenshot placeholder boxes */
+  .screenshot {
+    margin-top: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .screenshot-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .screenshot-text { font-size: 0.75rem; color: var(--sub); line-height: 1.5; }
+  .screenshot-text strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 0.8rem; }
+
+  /* Toggle tip */
+  .tip {
+    margin-top: 14px;
+    background: var(--green-dim);
+    border: 1px solid rgba(52,211,153,0.18);
+    border-radius: 9px; padding: 11px 14px;
+    font-size: 0.75rem; color: rgba(52,211,153,0.85); line-height: 1.6;
+  }
+  .tip strong { color: var(--green); }
+
+  /* ── Features strip ── */
+  .features {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 72px;
+  }
+  @media(max-width: 560px) { .features { grid-template-columns: 1fr; } }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 16px;
+    transition: border-color 0.2s;
+  }
+  .feature-card:hover { border-color: var(--border-hi); }
+  .feature-icon { font-size: 1.2rem; margin-bottom: 10px; }
+  .feature-name { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+  .feature-desc { font-size: 0.72rem; color: var(--sub); line-height: 1.55; font-weight: 400; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .footer-left { font-size: 0.72rem; color: var(--muted); }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a {
+    font-size: 0.72rem; color: var(--muted); text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--sub); }
+</style>
+</head>
+<body>
+
+<div class="glow-1"></div>
+<div class="glow-2"></div>
+
+<div class="wrap">
+
+  <!-- Nav -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+        <rect x="1" y="9" width="4" height="8" rx="1.5" fill="rgba(255,255,255,.6)"/>
+        <rect x="7" y="5" width="4" height="12" rx="1.5" fill="rgba(255,255,255,.6)"/>
+        <rect x="13" y="1" width="4" height="16" rx="1.5" fill="rgba(255,255,255,.6)"/>
+      </svg>
+      Perplexity Usage
+    </a>
+    <span class="nav-badge">v1.0</span>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-label">
+      <span class="hero-label-dot"></span>
+      Free Chrome Extension
+    </div>
+    <h1>Know your limits.<br><span class="accent">At a glance.</span></h1>
+    <p class="hero-sub">A tiny floating button on Perplexity that shows your remaining Pro searches, Research, Labs usage, and upload limit — live, with auto-refresh.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/gtwherocodesnow/Perplexity-Usage-status/raw/main/perplexity-usage-extension_2.zip" class="btn-primary" download>
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7.5 1v9M4 7l3.5 3.5L11 7"/><line x1="1" y1="13" x2="14" y2="13"/>
+        </svg>
+        Download Extension
+      </a>
+      <a href="https://github.com/gtwherocodesnow/Perplexity-Usage-status" class="btn-secondary" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        View on GitHub
+      </a>
+    </div>
+  </section>
+
+  <!-- Preview -->
+  <div class="preview">
+    <div class="preview-bar">
+      <div class="preview-dots">
+        <div class="preview-dot" style="background:#ff5f57"></div>
+        <div class="preview-dot" style="background:#ffbd2e"></div>
+        <div class="preview-dot" style="background:#28c840"></div>
+      </div>
+      <div class="preview-url">perplexity.ai</div>
+    </div>
+    <div class="preview-body">
+      <!-- Floating FAB -->
+      <div class="mini-fab">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+          <rect x="1" y="9" width="4" height="8" rx="1.5" fill="rgba(255,255,255,.75)"/>
+          <rect x="7" y="5" width="4" height="12" rx="1.5" fill="rgba(255,255,255,.75)"/>
+          <rect x="13" y="1" width="4" height="16" rx="1.5" fill="rgba(255,255,255,.75)"/>
+        </svg>
+      </div>
+      <!-- Panel -->
+      <div class="mini-panel">
+        <div class="mini-hdr">
+          <div style="display:flex;align-items:center;">
+            <span class="mini-dot"></span>
+            <span class="mini-title">Perplexity <em>Usage</em></span>
+          </div>
+          <span class="mini-ts">22:20:25</span>
+        </div>
+        <div class="mini-grid">
+          <div class="mini-card">
+            <div class="mini-card-bar" style="background:rgba(52,211,153,.5)"></div>
+            <div class="mini-cl">⚡ Pro</div>
+            <div class="mini-cv">141</div>
+            <div class="mini-cs">remaining</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-card-bar" style="background:rgba(251,191,36,.6)"></div>
+            <div class="mini-cl">🔬 Research</div>
+            <div class="mini-cv" style="color:#fbbf24">8</div>
+            <div class="mini-cs">remaining</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-card-bar" style="background:rgba(52,211,153,.5)"></div>
+            <div class="mini-cl">🧪 Labs</div>
+            <div class="mini-cv">25</div>
+            <div class="mini-cs">remaining</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-card-bar" style="background:rgba(52,211,153,.5)"></div>
+            <div class="mini-cl">📎 Upload</div>
+            <div class="mini-cv">16</div>
+            <div class="mini-cs">remaining</div>
+          </div>
+        </div>
+        <div class="mini-footer">
+          <div class="mini-countdown">
+            <span>54s</span>
+            <div class="mini-track"><div class="mini-fill"></div></div>
+          </div>
+          <span class="mini-label">auto-refresh</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="section-label">What's included</div>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-name">4 Key Metrics</div>
+      <div class="feature-desc">Pro, Research, Labs, and Upload Limit — all in one panel.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔄</div>
+      <div class="feature-name">Auto-refresh</div>
+      <div class="feature-desc">Updates every 60 seconds automatically. Live countdown shown.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <div class="feature-name">Non-intrusive</div>
+      <div class="feature-desc">Tiny floating button. Click to open, click away to close. Zero clutter.</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Install steps -->
+  <div class="section-label">Installation</div>
+  <div class="section-title">3 steps, under a minute</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <div class="step-title-text">Download the extension</div>
+        <div class="step-body">
+          Click <strong>Download Extension</strong> above. You'll get a <code>.zip</code> file — save it somewhere easy to find like your Desktop or Downloads folder. Then <strong>unzip it</strong> (double-click on Mac, right-click → Extract All on Windows).
+        </div>
+        <div class="screenshot">
+          <div class="screenshot-icon">📁</div>
+          <div class="screenshot-text">
+            <strong>You should see a folder called perplexity-usage-ext</strong>
+            containing manifest.json, content.js, popup.html, popup.js, and an icons folder.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <div class="step-title-text">Load it into Chrome</div>
+        <div class="step-body">
+          Open a new tab and go to <code>chrome://extensions</code>. In the top-right corner, toggle on <strong>Developer Mode</strong>. Then click <strong>Load unpacked</strong> and select the <strong>perplexity-usage-ext</strong> folder (not the zip, the folder inside it).
+        </div>
+        <div class="tip">
+          <strong>Developer mode</strong> is required to install extensions from outside the Chrome Web Store. It's safe — you can turn it back off after installing if you prefer.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <div class="step-title-text">Open Perplexity and click the button</div>
+        <div class="step-body">
+          Go to <strong>perplexity.ai</strong> while logged in. You'll see a small <strong>bar chart button</strong> in the bottom-right corner of the page. Click it — your usage panel opens instantly.
+        </div>
+        <div class="tip">
+          Works in the <strong>Perplexity web app (PWA)</strong> too — the button appears directly in the interface so you don't need a browser toolbar.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-left">Made for Perplexity Pro users · Not affiliated with Perplexity AI</div>
+    <div class="footer-links">
+      <a href="https://github.com/gtwherocodesnow/Perplexity-Usage-status" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/gtwherocodesnow/Perplexity-Usage-status/issues" target="_blank" rel="noopener">Report issue</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
